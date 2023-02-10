@@ -1,0 +1,7 @@
+language: python
+python:
+  - "3.11"
+install:
+  - python -m pip install pytest requests watchdog
+script:
+  - make test-travis
