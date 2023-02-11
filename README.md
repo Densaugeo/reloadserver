@@ -5,6 +5,16 @@ HTTP(S) server with automatic refresh on file changes, based on Python\'s http.s
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://mit-license.org/)
 [![Build Status](https://travis-ci.com/Densaugeo/reloadserver.svg?branch=master)](https://travis-ci.com/github/Densaugeo/reloadserver)
 
+## Supported Platforms
+
+| Platform | Supported? | Notes |
+|-|-|-|
+| Python 3.11+ | Yes | Tested on 3.11 every release. |
+| Python 3.10- | No | |
+| Linux | Yes | Tested on Fedora every release. |
+| Windows | Partially | Once tested manually. File watching didn't work, but triggering a reload by HTTP request did. |
+| Mac | No | I don't have a Mac. It might partially work, but I don't know. |
+
 ## Installation
 
 ~~~
@@ -36,7 +46,7 @@ python3 -m reloadserver --ignore 'temp/*'
 
 ## Trigger Reload by HTTP Request
 
-If your workflow makes file watching complicated, a reload can be triggered by sending a `POST` to `/api-reloadserver/trigger-reload`:
+If your workflow makes file watching complicated (or if you you want to use reloadserver on Windows where file watching doesn't work), a reload can be triggered by sending a `POST` to `/api-reloadserver/trigger-reload`:
 ~~~
 curl -X POST http://localhost:8000/api-reloadserver/trigger-reload
 ~~~
