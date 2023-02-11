@@ -75,13 +75,12 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(http.HTTPStatus.NOT_FOUND, 'Can only POST to /api-reloadserver/trigger-reload')
 
 def intercept_first_print() -> None:
-    if args.certificate:
-        # Use the right protocol in the first print call in case of HTTPS
-        old_print = builtins.print
-        def new_print(*args, **kwargs):
-            old_print(args[0].replace('HTTP', 'HTTPS').replace('http', 'https'), **kwargs)
-            builtins.print = old_print
-        builtins.print = new_print
+    # Use the right protocol in the first print call in case of HTTPS
+    old_print = builtins.print
+    def new_print(*args, **kwargs):
+        old_print(args[0].replace('HTTP', 'HTTPS').replace('http', 'https'), **kwargs)
+        builtins.print = old_print
+    builtins.print = new_print
 
 def ssl_wrap(socket) -> None:
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
@@ -101,38 +100,6 @@ def ssl_wrap(socket) -> None:
         print('SSL error: "{}", exiting'.format(e))
         sys.exit(5)
 
-def serve_forever() -> None:
-    # Verify arguments in case the method was called directly
-    assert hasattr(args, 'port') and type(args.port) is int
-    assert hasattr(args, 'bind')
-    assert hasattr(args, 'certificate')
-    assert hasattr(args, 'watch')
-    assert hasattr(args, 'ignore')
-    assert hasattr(args, 'blind')
-    
-    print('Modify a watched file or POST to /api-reloadserver/trigger-reload to reload clients')
-    
-    if True:
-        class DualStackServer(http.server.ThreadingHTTPServer):
-            def server_bind(self):
-                # suppress exception when protocol is IPv4
-                with contextlib.suppress(Exception):
-                    self.socket.setsockopt(
-                        socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
-                bind = super().server_bind()
-                if args.certificate:
-                    self.socket = ssl_wrap(self.socket)
-                return bind
-        server_class = DualStackServer
-    
-    intercept_first_print()
-    http.server.test(
-        HandlerClass=SimpleHTTPRequestHandler,
-        ServerClass=server_class,
-        port=args.port,
-        bind=args.bind,
-    )
-
 def main() -> None:
     global args
     
@@ -151,9 +118,8 @@ def main() -> None:
         help='Do not use the built-in ignores (dotfiles and some commonly ignored folders')
     parser.add_argument('--blind', action='store_true', default=False,
         help='Disable file watching and trigger reloads only by HTTP request. Overrides --watch and --ignore [default: false]')
-    
     args = parser.parse_args()
-    print(args)
+    
     ignore_patterns = [] if args.skip_built_in_ignores else [
         '.*', '__pycache__/*', 'node_modules/*'
     ] + args.ignore
@@ -168,4 +134,23 @@ def main() -> None:
         ), path='.', recursive=True)
         observer.start()
     
-    serve_forever()
+    class DualStackServer(http.server.ThreadingHTTPServer):
+        def server_bind(self):
+            # suppress exception when protocol is IPv4
+            with contextlib.suppress(Exception):
+                self.socket.setsockopt(
+                    socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+            bind = super().server_bind()
+            if args.certificate:
+                self.socket = ssl_wrap(self.socket)
+            return bind
+    
+    print('Modify a watched file or POST to /api-reloadserver/trigger-reload to reload clients')
+    if args.certificate: intercept_first_print()
+    
+    http.server.test(
+        HandlerClass=SimpleHTTPRequestHandler,
+        ServerClass=DualStackServer,
+        port=args.port,
+        bind=args.bind,
+    )
