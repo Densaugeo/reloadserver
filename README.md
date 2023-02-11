@@ -3,7 +3,7 @@
 HTTP(S) server with automatic refresh on file changes, based on Python\'s http.server 
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://mit-license.org/)
-[![Build Status](https://travis-ci.com/Densaugeo/reloadserver.svg?branch=master)](https://travis-ci.com/github/Densaugeo/reloadserver)
+[![Build Status](https://travis-ci.com/Densaugeo/reloadserver.svg?branch=main)](https://travis-ci.com/github/Densaugeo/reloadserver)
 
 ## Supported Platforms
 
