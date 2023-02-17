@@ -9,7 +9,7 @@ HTTP(S) server with automatic refresh on file changes, based on Python\'s http.s
 
 | Platform | Supported? | Notes |
 |-|-|-|
-| Python 3.10+ | Yes | Tested on 3.10 and 3.11 every release. |
+| Python 3.10+ | Yes | Tested on 3.10 through 3.12 every release. |
 | Python 3.9- | No | |
 | Linux | Yes | Tested on Fedora and Ubuntu every release. |
 | Windows | Partially | Once tested manually. File watching didn't work, but triggering a reload by HTTP request did. |
