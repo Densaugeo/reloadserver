@@ -113,9 +113,9 @@ def main() -> None:
     parser.add_argument('--watch', '-w', metavar='PATTERN', nargs='*', default=['*'],
         help='File(s) to watch. Accepts multiple values [default: .]')
     parser.add_argument('--ignore', '-i', metavar='PATTERN', nargs='*', default=[],
-        help='File(s) to ignore. Accepts multiple values [default: none')
+        help='File(s) to ignore. Accepts multiple values [default: none]')
     parser.add_argument('--skip-built-in-ignores', action='store_true', default=False,
-        help='Do not use the built-in ignores (dotfiles and some commonly ignored folders')
+        help='Do not use the built-in ignores (dotfiles and some commonly ignored folders)')
     parser.add_argument('--blind', action='store_true', default=False,
         help='Disable file watching and trigger reloads only by HTTP request. Overrides --watch and --ignore [default: false]')
     args = parser.parse_args()
