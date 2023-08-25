@@ -34,15 +34,31 @@ class WatchdogHandler(watchdog.events.PatternMatchingEventHandler):
         with reload_signal: reload_signal.notify_all()
 
 class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
-    # Need this to intercept the Content-Length header when sending .html files, because
-    # the injected script tag alters the content's length
-    def send_header_interceptor(self, keyword: str, value: str) -> None:
-        if keyword == 'Content-Length': value = str(int(value) + len(SCRIPT_TAG))
-        super().send_header(keyword, value)
-    
     # To be used only on .html files, to inject the script tag
     def copyfile_interceptor(self, source: BinaryIO, outputfile: BinaryIO) -> None:
         outputfile.write(source.read().replace(b'</html>', SCRIPT_TAG + b'</html>'))
+    
+    def flush_headers(self) -> None:
+        update_content_length = False
+        
+        if hasattr(self, '_headers_buffer'):
+            for header in self._headers_buffer:
+                if header[:13] == b'Content-type:' and b'text/html' in header:
+                    setattr(self, 'copyfile', self.copyfile_interceptor)
+                    update_content_length = True
+        
+        # If sending .html files, the Content-Length header must be updated
+        # because the injected script tag alters the content's length
+        if update_content_length:
+            for i, header in enumerate(self._headers_buffer):
+                if header[:15] == b'Content-Length:':
+                    length = int(header[15:]) + len(SCRIPT_TAG)
+                    
+                    # Use same encoding that self.send_header() uses
+                    self._headers_buffer[i] = 'Content-Length: {}\r\n'.format(
+                        length).encode('latin-1', 'strict')
+        
+        super().flush_headers()
     
     def do_GET(self) -> None:
         if self.path == '/api-reloadserver/wait-for-reload':
@@ -54,12 +70,6 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(http.HTTPStatus.METHOD_NOT_ALLOWED)
             self.end_headers()
         else:
-            if self.path[-5:] == '.html':
-                # These don't need to be removed afterward, because each .do_GET() happens
-                # in its own thread and they don't share
-                setattr(self, 'send_header', self.send_header_interceptor)
-                setattr(self, 'copyfile', self.copyfile_interceptor)
-            
             super().do_GET()
     
     def do_POST(self) -> None:

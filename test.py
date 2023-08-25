@@ -291,6 +291,14 @@ def test_script_tag_injected_into_html():
     res = get('/test.html')
     assert res.status_code == 200
     assert int(res.headers['Content-Length']) > 13
+    assert '<!-- Injected by reloadserver -->' in res.text
+    assert '<script type="text/javascript">' in res.text
+    assert '</script>' in res.text
+
+def test_script_tag_injected_into_html_no_extension():
+    res = get('/')
+    assert res.status_code == 200
+    assert '<!-- Injected by reloadserver -->' in res.text
     assert '<script type="text/javascript">' in res.text
     assert '</script>' in res.text
 
