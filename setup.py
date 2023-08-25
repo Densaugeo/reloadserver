@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/Densaugeo/reloadserver',
-    packages=setuptools.find_packages(),
+    packages=['reloadserver'],
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',
@@ -21,5 +21,8 @@ setuptools.setup(
     python_requires='>=3.10',
     install_requires=[
         'watchdog',
-    ]
+    ],
+    entry_points = {
+        'console_scripts': ['reloadserver=reloadserver:main'],
+    }
 )
