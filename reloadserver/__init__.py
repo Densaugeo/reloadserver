@@ -17,7 +17,7 @@ async function poll() {
     if(res.status == 204) {
       // Firefox-only: true forces full reload, like ctrl+F5
       location.reload(true)
-    } else throw Error(`Expected 204 but got $(res.status)`)
+    } else throw Error(`Expected 204 but got ${res.status}`)
   } catch(e) {
     console.log(`Error polling /api-reloadserver/wait-for-reload: ${e}`)
     setTimeout(poll, 1000)
