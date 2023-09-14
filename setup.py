@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='reloadserver',
-    version='0.1.3',
+    version='0.1.4',
     author='Densaugeo',
     author_email='author@example.com',
     description='HTTP(S) server with automatic refresh on file changes, based on Python\'s http.server',
