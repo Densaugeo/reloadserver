@@ -1,4 +1,4 @@
-import http.server, http, pathlib, sys, argparse, ssl, builtins, contextlib, threading
+import http.server, http, pathlib, sys, argparse, ssl, builtins, contextlib, threading, re
 from typing import BinaryIO
 
 # Does not seem to do be used, but leaving this import out causes uploadserver to not
@@ -36,7 +36,7 @@ class WatchdogHandler(watchdog.events.PatternMatchingEventHandler):
 class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     # To be used only on .html files, to inject the script tag
     def copyfile_interceptor(self, source: BinaryIO, outputfile: BinaryIO) -> None:
-        outputfile.write(source.read().replace(b'</html>', SCRIPT_TAG + b'</html>'))
+        outputfile.write(re.sub(b'(</html>)?\\s*$', SCRIPT_TAG + b'\\1', source.read(), count=1))
     
     def flush_headers(self) -> None:
         update_content_length = False
