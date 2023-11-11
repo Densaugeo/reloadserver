@@ -31,16 +31,23 @@ reload_signal = threading.Condition()
 debounce_timer = None
 
 def notify_reload():
+    global debounce_timer
+    if debounce_timer is not None:
+        debounce_timer.cancel()
+
     with reload_signal:
         reload_signal.notify_all()
 
 def trigger_reload():
-    # Debounce reload triggers
-    global debounce_timer
-    if debounce_timer is not None:
-        debounce_timer.cancel()
-    debounce_timer = threading.Timer(0.5, notify_reload) # TODO Make debounce interval configurable
-    debounce_timer.start()
+    if args.debounce_interval > 0:
+        # Debounce reload triggers
+        global debounce_timer
+        if debounce_timer is not None:
+            debounce_timer.cancel()
+        debounce_timer = threading.Timer(args.debounce_interval / 1000, notify_reload)
+        debounce_timer.start()
+    else:
+        notify_reload()
 
 class WatchdogHandler(watchdog.events.PatternMatchingEventHandler):
     def on_modified(self, event) -> None:
@@ -75,8 +82,8 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     
     def do_GET(self) -> None:
         if self.path == '/api-reloadserver/wait-for-reload':
-            trigger_reload()
-            
+            with reload_signal: reload_signal.wait()
+
             self.send_response(http.HTTPStatus.NO_CONTENT)
             self.end_headers()
         elif self.path == '/api-reloadserver/trigger-reload':
@@ -141,6 +148,8 @@ def main() -> None:
         help='Do not use the built-in ignores (dotfiles and some commonly ignored folders)')
     parser.add_argument('--blind', action='store_true', default=False,
         help='Disable file watching and trigger reloads only by HTTP request. Overrides --watch and --ignore [default: false]')
+    parser.add_argument('--debounce-interval', '-D', type=int, default=500,
+        help='Specify the minimum amount of time in milliseconds between reload triggers (set to 0 to disable debouncing entirely) [default: 500]')
     args = parser.parse_args()
     
     ignore_patterns = [] if args.skip_built_in_ignores else [
