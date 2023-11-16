@@ -32,22 +32,18 @@ debounce_timer = None
 
 def notify_reload_signal():
     global debounce_timer
-    if debounce_timer is not None:
-        debounce_timer.cancel()
 
     with reload_signal:
         reload_signal.notify_all()
 
 def trigger_reload_debounced():
-    if args.debounce_interval > 0:
-        # Debounce reload triggers
-        global debounce_timer
-        if debounce_timer is not None:
-            debounce_timer.cancel()
-        debounce_timer = threading.Timer(args.debounce_interval / 1000, notify_reload_signal)
-        debounce_timer.start()
-    else:
-        notify_reload_signal()
+    # Debounce reload triggers
+    global debounce_timer
+    if debounce_timer is not None:
+        debounce_timer.cancel()
+    debounce_timer = threading.Timer(args.debounce_interval / 1000, notify_reload_signal)
+    debounce_timer.start()
+    
 
 class WatchdogHandler(watchdog.events.PatternMatchingEventHandler):
     def on_modified(self, event) -> None:
@@ -149,8 +145,12 @@ def main() -> None:
     parser.add_argument('--blind', action='store_true', default=False,
         help='Disable file watching and trigger reloads only by HTTP request. Overrides --watch and --ignore [default: false]')
     parser.add_argument('--debounce-interval', '-D', type=int, default=500,
-        help='Specify the minimum amount of time in milliseconds between reload triggers (set to 0 to disable debouncing entirely) [default: 500]')
+        help='Specify the minimum amount of time in milliseconds between reload triggers (minimum value: 10) [default: 500]')
     args = parser.parse_args()
+
+    if args.debounce_interval < 10:
+        print("ERROR: Debouncing interval must be at least 10 ms (-D,--debounce-interval)")
+        exit(1)
     
     ignore_patterns = [] if args.skip_built_in_ignores else [
         '.*', '__pycache__/*', 'node_modules/*'
