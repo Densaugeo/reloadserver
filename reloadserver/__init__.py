@@ -30,7 +30,7 @@ setTimeout(poll, 1000)
 reload_signal = threading.Condition()
 debounce_timer = None
 
-def notify_reload():
+def notify_reload_signal():
     global debounce_timer
     if debounce_timer is not None:
         debounce_timer.cancel()
@@ -38,20 +38,20 @@ def notify_reload():
     with reload_signal:
         reload_signal.notify_all()
 
-def trigger_reload():
+def trigger_reload_debounced():
     if args.debounce_interval > 0:
         # Debounce reload triggers
         global debounce_timer
         if debounce_timer is not None:
             debounce_timer.cancel()
-        debounce_timer = threading.Timer(args.debounce_interval / 1000, notify_reload)
+        debounce_timer = threading.Timer(args.debounce_interval / 1000, notify_reload_signal)
         debounce_timer.start()
     else:
-        notify_reload()
+        notify_reload_signal()
 
 class WatchdogHandler(watchdog.events.PatternMatchingEventHandler):
     def on_modified(self, event) -> None:
-        trigger_reload()
+        trigger_reload_debounced()
 
 class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     # To be used only on .html files, to inject the script tag
@@ -94,7 +94,7 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     
     def do_POST(self) -> None:
         if self.path == '/api-reloadserver/trigger-reload':
-            trigger_reload()
+            trigger_reload_debounced()
 
             self.send_response(http.HTTPStatus.NO_CONTENT)
             self.end_headers()
