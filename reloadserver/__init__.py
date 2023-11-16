@@ -32,6 +32,8 @@ debounce_timer = None
 
 def notify_reload_signal():
     global debounce_timer
+    if debounce_timer is not None:
+        debounce_timer.cancel()
 
     with reload_signal:
         reload_signal.notify_all()
@@ -90,7 +92,7 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     
     def do_POST(self) -> None:
         if self.path == '/api-reloadserver/trigger-reload':
-            trigger_reload_debounced()
+            notify_reload_signal()
 
             self.send_response(http.HTTPStatus.NO_CONTENT)
             self.end_headers()
