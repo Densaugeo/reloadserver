@@ -23,7 +23,7 @@ async function poll() {
     setTimeout(poll, 1000)
   }
 }
-setTimeout(poll, 1000)
+poll()
 </script>
 '''
 
