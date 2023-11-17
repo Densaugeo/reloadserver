@@ -36,7 +36,14 @@ class WatchdogHandler(watchdog.events.PatternMatchingEventHandler):
 class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     # To be used only on .html files, to inject the script tag
     def copyfile_interceptor(self, source: BinaryIO, outputfile: BinaryIO) -> None:
-        outputfile.write(source.read().replace(b'</html>', SCRIPT_TAG + b'</html>'))
+        before_inject = source.read()
+        if b'</html>' not in before_inject:
+            print('WARNING: missing closing </html> tag, script will be injected at the end of the file instead')
+            outputfile.write(before_inject + SCRIPT_TAG)
+        else:
+            outputfile.write(before_inject.replace(
+                b'</html>', SCRIPT_TAG + b'</html>'))
+
     
     def flush_headers(self) -> None:
         update_content_length = False
