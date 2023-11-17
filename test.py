@@ -75,7 +75,8 @@ def try_a_fixture(request):
 # Tests #
 #########
 
-# Verify a basic test can run. Most importantly, verify the sleep is long enough for the sever to start
+# Verify a basic test can run. Most importantly, verify the sleep is long enough
+# for the sever to start
 def test_basic():
     assert get('/').status_code == 200
 
@@ -405,7 +406,8 @@ def test_curl_example():
     
     assert subprocess.run([
             'curl', '--insecure', '-X', 'POST',
-            '{}://localhost:8000/api-reloadserver/trigger-reload'.format(PROTOCOL.lower()),
+            '{}://localhost:8000/api-reloadserver/trigger-reload'.format(
+                PROTOCOL.lower()),
         ],
         stdout=None if VERBOSE else subprocess.DEVNULL,
         stderr=None if VERBOSE else subprocess.DEVNULL,
@@ -417,13 +419,15 @@ def test_curl_example():
 # Helpers #
 ###########
 
-def get(path: str | bytes, port: int = 8000, *args, **kwargs) -> requests.Response:
-    return requests.get('{}://127.0.0.1:{}{}'.format(PROTOCOL.lower(), port, path),
-        verify=False, *args, **kwargs)
+def get(path: str | bytes, port: int = 8000, *args, **kwargs
+    ) -> requests.Response:
+    return requests.get('{}://127.0.0.1:{}{}'.format(PROTOCOL.lower(), port,
+        path), verify=False, *args, **kwargs)
 
-def post(path: str | bytes, port: int = 8000, *args, **kwargs) -> requests.Response:
-    return requests.post('{}://127.0.0.1:{}{}'.format(PROTOCOL.lower(), port, path),
-        verify=False, *args, **kwargs)
+def post(path: str | bytes, port: int = 8000, *args, **kwargs
+    ) -> requests.Response:
+    return requests.post('{}://127.0.0.1:{}{}'.format(PROTOCOL.lower(), port,
+        path), verify=False, *args, **kwargs)
 
 def wait_for_reload(index: int = 0) -> None:
     res = get('/api-reloadserver/wait-for-reload')

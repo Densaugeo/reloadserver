@@ -1,8 +1,9 @@
-import http.server, http, pathlib, sys, argparse, ssl, builtins, contextlib, threading
+import http.server, http, pathlib, sys, argparse, ssl, builtins, contextlib, \
+    threading
 from typing import BinaryIO
 
-# Does not seem to do be used, but leaving this import out causes uploadserver to not
-# receive IPv4 requests when started with default options under Windows
+# Does not seem to do be used, but leaving this import out causes uploadserver
+# to not receive IPv4 requests when started with default options under Windows
 import socket 
 
 import watchdog.observers, watchdog.events
@@ -12,7 +13,8 @@ SCRIPT_TAG = b'''
 <script type="text/javascript">
 async function poll() {
   try {
-    var res = await fetch('/api-reloadserver/wait-for-reload', { cache: 'reload'})
+    var res = await fetch('/api-reloadserver/wait-for-reload', { cache:
+        'reload' })
     
     if(res.status == 204) {
       // Firefox-only: true forces full reload, like ctrl+F5
@@ -49,10 +51,12 @@ class WatchdogHandler(watchdog.events.PatternMatchingEventHandler):
 
 class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     # To be used only on .html files, to inject the script tag
-    def copyfile_interceptor(self, source: BinaryIO, outputfile: BinaryIO) -> None:
+    def copyfile_interceptor(self, source: BinaryIO, outputfile: BinaryIO
+        ) -> None:
         before_inject = source.read()
         if b'</html>' not in before_inject:
-            print('WARNING: No closing </html> tag, reload script will be injected at end of file')
+            print('WARNING: No closing </html> tag, reload script will be '
+                'injected at end of file')
             outputfile.write(before_inject + SCRIPT_TAG)
         else:
             outputfile.write(before_inject.replace(
@@ -103,7 +107,8 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(http.HTTPStatus.METHOD_NOT_ALLOWED)
             self.end_headers()
         else:
-            self.send_error(http.HTTPStatus.NOT_FOUND, 'Can only POST to /api-reloadserver/trigger-reload')
+            self.send_error(http.HTTPStatus.NOT_FOUND, 'Can only POST to /api-'
+                'reloadserver/trigger-reload')
 
 def intercept_first_print() -> None:
     # Use the right protocol in the first print call in case of HTTPS
@@ -141,20 +146,26 @@ def main() -> None:
         help='Specify alternate bind address [default: all interfaces]')
     parser.add_argument('--certificate', '-c',
         help='Specify HTTPS server certificate to use [default: none]')
-    parser.add_argument('--watch', '-w', metavar='PATTERN', nargs='*', default=['*'],
+    parser.add_argument('--watch', '-w', metavar='PATTERN', nargs='*',
+        default=['*'],
         help='File(s) to watch. Accepts multiple values [default: .]')
-    parser.add_argument('--ignore', '-i', metavar='PATTERN', nargs='*', default=[],
+    parser.add_argument('--ignore', '-i', metavar='PATTERN', nargs='*',
+        default=[],
         help='File(s) to ignore. Accepts multiple values [default: none]')
-    parser.add_argument('--skip-built-in-ignores', action='store_true', default=False,
-        help='Do not use the built-in ignores (dotfiles and some commonly ignored folders)')
+    parser.add_argument('--skip-built-in-ignores', action='store_true', 
+        default=False,
+        help='Do not use the built-in ignores (dotfiles and some commonly '
+        'ignored folders)')
     parser.add_argument('--blind', action='store_true', default=False,
-        help='Disable file watching and trigger reloads only by HTTP request. Overrides --watch and --ignore [default: false]')
+        help='Disable file watching and trigger reloads only by HTTP request. '
+        'Overrides --watch and --ignore [default: false]')
     parser.add_argument('--debounce-interval', '-D', type=int, default=500,
         help='Minimum time in ms between reloads [default: 500, minimum: 10]')
     args = parser.parse_args()
 
     if args.debounce_interval < 10:
-        print("ERROR: Debouncing interval must be at least 10 ms (-D,--debounce-interval)")
+        print('ERROR: Debouncing interval must be at least 10 ms (-D, '
+            '--debounce-interval)')
         exit(1)
     
     ignore_patterns = [] if args.skip_built_in_ignores else [
@@ -182,7 +193,8 @@ def main() -> None:
                 self.socket = ssl_wrap(self.socket)
             return bind
     
-    print('Modify a watched file or POST to /api-reloadserver/trigger-reload to reload clients')
+    print('Modify a watched file or POST to /api-reloadserver/trigger-reload '
+        'to reload clients')
     if args.certificate: intercept_first_print()
     
     http.server.test(
