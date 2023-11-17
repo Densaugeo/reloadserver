@@ -106,3 +106,5 @@ https://HOSTNAME:8443 {
 ## Acknowledgements
 
 Much of `main()` was copied from Python's `http.server`. Many other elements were copied from https://github.com/Densaugeo/uploadserver (another of my projects), thanks to all the contributors over there too!
+
+Thanks to kwyntes for the first pull requests! (Improved handling of malformed .html files and added debouncing).
