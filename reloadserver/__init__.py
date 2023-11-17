@@ -23,15 +23,33 @@ async function poll() {
     setTimeout(poll, 1000)
   }
 }
-setTimeout(poll, 1000)
+poll()
 </script>
 '''
 
 reload_signal = threading.Condition()
+debounce_timer = None
+
+def notify_reload_signal():
+    global debounce_timer
+    if debounce_timer is not None:
+        debounce_timer.cancel()
+
+    with reload_signal:
+        reload_signal.notify_all()
+
+def trigger_reload_debounced():
+    # Debounce reload triggers
+    global debounce_timer
+    if debounce_timer is not None:
+        debounce_timer.cancel()
+    debounce_timer = threading.Timer(args.debounce_interval / 1000, notify_reload_signal)
+    debounce_timer.start()
+    
 
 class WatchdogHandler(watchdog.events.PatternMatchingEventHandler):
     def on_modified(self, event) -> None:
-        with reload_signal: reload_signal.notify_all()
+        trigger_reload_debounced()
 
 class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     # To be used only on .html files, to inject the script tag
@@ -70,7 +88,7 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == '/api-reloadserver/wait-for-reload':
             with reload_signal: reload_signal.wait()
-            
+
             self.send_response(http.HTTPStatus.NO_CONTENT)
             self.end_headers()
         elif self.path == '/api-reloadserver/trigger-reload':
@@ -81,8 +99,8 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     
     def do_POST(self) -> None:
         if self.path == '/api-reloadserver/trigger-reload':
-            with reload_signal: reload_signal.notify_all()
-            
+            notify_reload_signal()
+
             self.send_response(http.HTTPStatus.NO_CONTENT)
             self.end_headers()
         elif self.path == '/api-reloadserver/wait-for-reload':
@@ -135,7 +153,13 @@ def main() -> None:
         help='Do not use the built-in ignores (dotfiles and some commonly ignored folders)')
     parser.add_argument('--blind', action='store_true', default=False,
         help='Disable file watching and trigger reloads only by HTTP request. Overrides --watch and --ignore [default: false]')
+    parser.add_argument('--debounce-interval', '-D', type=int, default=500,
+        help='Specify the minimum amount of time in milliseconds between reload triggers (minimum value: 10) [default: 500]')
     args = parser.parse_args()
+
+    if args.debounce_interval < 10:
+        print("ERROR: Debouncing interval must be at least 10 ms (-D,--debounce-interval)")
+        exit(1)
     
     ignore_patterns = [] if args.skip_built_in_ignores else [
         '.*', '__pycache__/*', 'node_modules/*'
