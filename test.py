@@ -48,8 +48,11 @@ def try_a_fixture(request):
             shell_args += [str(kwargs['port'])]
         if 'watch' in kwargs: shell_args += ['-w'] + kwargs['watch']
         if 'ignore' in kwargs: shell_args += ['-i'] + kwargs['ignore']
-        if 'skip_built_in_ignores' in kwargs: shell_args += ['--skip-built-in-ignores']
+        if 'skip_built_in_ignores' in kwargs: shell_args += \
+            ['--skip-built-in-ignores']
         if 'blind' in kwargs: shell_args += ['--blind']
+        if 'debounce_interval' in kwargs: shell_args += ['-D'] + \
+            kwargs['debounce_interval']
     
     server = subprocess.Popen(shell_args)
     
@@ -136,6 +139,25 @@ def test_reload_by_api_bad_path():
     thread.join(2)
     with lock: assert wait_for_reload_responses[0] == 204
 
+@pytest.mark.fixture_args(debounce_interval=['5000'])
+def test_reload_by_api_ignores_debounce():
+    thread = threading.Thread(target=wait_for_two_reloads)
+    thread.start()
+    
+    time.sleep(0.1)
+    with lock:
+        assert wait_for_reload_responses[0] is None
+        assert wait_for_reload_responses[1] is None
+    
+    assert post('/api-reloadserver/trigger-reload').status_code == 204
+    time.sleep(0.02) # Give wait thread time to poll again
+    assert post('/api-reloadserver/trigger-reload').status_code == 204
+    thread.join(2)
+    with lock:
+        assert wait_for_reload_responses[0] == 204
+        assert wait_for_reload_responses[1] == 204
+
+@pytest.mark.fixture_args(debounce_interval=['10'])
 def test_reload_by_watchdog():
     thread = threading.Thread(target=wait_for_reload)
     thread.start()
@@ -147,6 +169,7 @@ def test_reload_by_watchdog():
     thread.join(2)
     with lock: assert wait_for_reload_responses[0] == 204
 
+@pytest.mark.fixture_args(debounce_interval=['10'])
 def test_reload_by_watchdog_multiple():
     threads = [
         threading.Thread(target=wait_for_reload),
@@ -165,6 +188,7 @@ def test_reload_by_watchdog_multiple():
         assert wait_for_reload_responses[0] == 204
         assert wait_for_reload_responses[1] == 204
 
+@pytest.mark.fixture_args(debounce_interval=['10'])
 def test_reload_by_watchdog_ignored_file():
     thread = threading.Thread(target=wait_for_reload)
     thread.start()
@@ -180,7 +204,48 @@ def test_reload_by_watchdog_ignored_file():
     thread.join(2)
     with lock: assert wait_for_reload_responses[0] == 204
 
-@pytest.mark.fixture_args(blind=True)
+@pytest.mark.fixture_args(debounce_interval=['500'])
+def test_reload_by_watchdog_debounced():
+    thread = threading.Thread(target=wait_for_reload)
+    thread.start()
+    
+    time.sleep(0.1)
+    with lock: assert wait_for_reload_responses[0] is None
+    
+    with open('some-file', 'w') as f: f.write('foo')
+    time.sleep(0.25)
+    with lock: assert wait_for_reload_responses[0] is None
+    
+    with open('some-file', 'w') as f: f.write('bar')
+    time.sleep(0.25)
+    with lock: assert wait_for_reload_responses[0] is None
+    
+    with open('some-file', 'w') as f: f.write('baz')
+    time.sleep(0.25)
+    with lock: assert wait_for_reload_responses[0] is None
+    
+    thread.join(2)
+    with lock: assert wait_for_reload_responses[0] == 204
+
+@pytest.mark.fixture_args(debounce_interval=['10'])
+def test_reload_by_watchdog_short_debounce():
+    thread = threading.Thread(target=wait_for_two_reloads)
+    thread.start()
+    
+    time.sleep(0.1)
+    with lock:
+        assert wait_for_reload_responses[0] is None
+        assert wait_for_reload_responses[1] is None
+    
+    with open('some-file', 'w') as f: f.write('foo')
+    time.sleep(0.2) # 20 ms seems enough to get around 10 ms debouce window
+    with open('some-other-file', 'w') as f: f.write('bar')
+    thread.join(2)
+    with lock:
+        assert wait_for_reload_responses[0] == 204
+        assert wait_for_reload_responses[1] == 204
+
+@pytest.mark.fixture_args(blind=True, debounce_interval=['10'])
 def test_blind():
     thread = threading.Thread(target=wait_for_reload)
     thread.start()
@@ -196,7 +261,7 @@ def test_blind():
     thread.join(2)
     with lock: assert wait_for_reload_responses[0] == 204
 
-@pytest.mark.fixture_args(skip_built_in_ignores=True)
+@pytest.mark.fixture_args(skip_built_in_ignores=True, debounce_interval=['10'])
 def test_skip_built_in_ignores():
     thread = threading.Thread(target=wait_for_reload)
     thread.start()
@@ -208,7 +273,7 @@ def test_skip_built_in_ignores():
     thread.join(2)
     with lock: assert wait_for_reload_responses[0] == 204
 
-@pytest.mark.fixture_args(watch=['*.js'])
+@pytest.mark.fixture_args(watch=['*.js'], debounce_interval=['10'])
 def test_watch():
     thread = threading.Thread(target=wait_for_reload)
     thread.start()
@@ -220,7 +285,7 @@ def test_watch():
     thread.join(2)
     with lock: assert wait_for_reload_responses[0] == 204
 
-@pytest.mark.fixture_args(watch=['*.html', '*.js'])
+@pytest.mark.fixture_args(watch=['*.html', '*.js'], debounce_interval=['10'])
 def test_watch_multiple():
     for i, filename in enumerate(['some-markup.html', 'some-script.js']):
         thread = threading.Thread(target=wait_for_reload, kwargs={ 'index': i })
@@ -233,7 +298,7 @@ def test_watch_multiple():
         thread.join(2)
         with lock: assert wait_for_reload_responses[i] == 204
 
-@pytest.mark.fixture_args(watch=['*.js'])
+@pytest.mark.fixture_args(watch=['*.js'], debounce_interval=['10'])
 def test_watch_different_file():
     thread = threading.Thread(target=wait_for_reload)
     thread.start()
@@ -249,7 +314,7 @@ def test_watch_different_file():
     thread.join(2)
     with lock: assert wait_for_reload_responses[0] == 204
 
-@pytest.mark.fixture_args(ignore=['*.css'])
+@pytest.mark.fixture_args(ignore=['*.css'], debounce_interval=['10'])
 def test_ignore():
     thread = threading.Thread(target=wait_for_reload)
     thread.start()
@@ -265,7 +330,7 @@ def test_ignore():
     thread.join(2)
     with lock: assert wait_for_reload_responses[0] == 204
 
-@pytest.mark.fixture_args(ignore=['*.css', '*.md'])
+@pytest.mark.fixture_args(ignore=['*.css', '*.md'], debounce_interval=['10'])
 def test_ignore_multiple():
     thread = threading.Thread(target=wait_for_reload)
     thread.start()
@@ -363,3 +428,8 @@ def post(path: str | bytes, port: int = 8000, *args, **kwargs) -> requests.Respo
 def wait_for_reload(index: int = 0) -> None:
     res = get('/api-reloadserver/wait-for-reload')
     with lock: wait_for_reload_responses[index] = res.status_code
+
+def wait_for_two_reloads() -> None:
+    for i in range(2):
+        res = get('/api-reloadserver/wait-for-reload')
+        with lock: wait_for_reload_responses[i] = res.status_code

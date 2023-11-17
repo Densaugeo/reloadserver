@@ -30,7 +30,7 @@ poll()
 reload_signal = threading.Condition()
 debounce_timer = None
 
-def notify_reload_signal():
+def reload():
     global debounce_timer
     if debounce_timer is not None:
         debounce_timer.cancel()
@@ -38,25 +38,21 @@ def notify_reload_signal():
     with reload_signal:
         reload_signal.notify_all()
 
-def trigger_reload_debounced():
-    # Debounce reload triggers
-    global debounce_timer
-    if debounce_timer is not None:
-        debounce_timer.cancel()
-    debounce_timer = threading.Timer(args.debounce_interval / 1000, notify_reload_signal)
-    debounce_timer.start()
-    
-
 class WatchdogHandler(watchdog.events.PatternMatchingEventHandler):
     def on_modified(self, event) -> None:
-        trigger_reload_debounced()
+        global debounce_timer
+        if debounce_timer is not None:
+            debounce_timer.cancel()
+        
+        debounce_timer = threading.Timer(args.debounce_interval / 1000, reload)
+        debounce_timer.start()
 
 class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     # To be used only on .html files, to inject the script tag
     def copyfile_interceptor(self, source: BinaryIO, outputfile: BinaryIO) -> None:
         before_inject = source.read()
         if b'</html>' not in before_inject:
-            print('WARNING: missing closing </html> tag, script will be injected at the end of the file instead')
+            print('WARNING: No closing </html> tag, reload script will be injected at end of file')
             outputfile.write(before_inject + SCRIPT_TAG)
         else:
             outputfile.write(before_inject.replace(
@@ -99,7 +95,7 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     
     def do_POST(self) -> None:
         if self.path == '/api-reloadserver/trigger-reload':
-            notify_reload_signal()
+            reload()
 
             self.send_response(http.HTTPStatus.NO_CONTENT)
             self.end_headers()
@@ -154,7 +150,7 @@ def main() -> None:
     parser.add_argument('--blind', action='store_true', default=False,
         help='Disable file watching and trigger reloads only by HTTP request. Overrides --watch and --ignore [default: false]')
     parser.add_argument('--debounce-interval', '-D', type=int, default=500,
-        help='Specify the minimum amount of time in milliseconds between reload triggers (minimum value: 10) [default: 500]')
+        help='Minimum time in ms between reloads [default: 500, minimum: 10]')
     args = parser.parse_args()
 
     if args.debounce_interval < 10:
