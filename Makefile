@@ -23,6 +23,7 @@ test-travis: server.pem
 
 install-dev:
 	chmod 775 test-all.sh
+	$(PY) -m ensurepip --upgrade
 	$(PY) -m pip install --user watchdog
 	
 	$(PY) -m venv venv-$(PY)

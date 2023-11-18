@@ -3,7 +3,8 @@ language: python
 python:
   - "3.10"
   - "3.11"
-  - "3.12-dev"
+  - "3.12"
+  - "3.13-dev"
 install:
   - python -m pip install pytest requests watchdog
 script:
