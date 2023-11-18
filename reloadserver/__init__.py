@@ -1,5 +1,5 @@
 import http.server, http, pathlib, sys, argparse, ssl, builtins, contextlib, \
-    threading
+    threading, os
 from typing import BinaryIO
 
 # Does not seem to do be used, but leaving this import out causes uploadserver
@@ -160,7 +160,8 @@ def main() -> None:
     parser.add_argument('--skip-built-in-ignores', action='store_true', 
         default=False,
         help='Do not use the built-in ignores (dotfiles and some commonly '
-        'ignored folders)')
+        'ignored folders) (built-in ignores are never used on Windows) '
+        '[default: false]')
     parser.add_argument('--blind', action='store_true', default=False,
         help='Disable file watching and trigger reloads only by HTTP request. '
         'Overrides --watch and --ignore [default: false]')
@@ -173,9 +174,11 @@ def main() -> None:
             '--debounce-interval)')
         exit(1)
     
-    ignore_patterns = [] if args.skip_built_in_ignores else [
-        '.*', '__pycache__/*', 'node_modules/*',
-    ] + args.ignore
+    ignore_patterns = args.ignore
+    # Watchdog's ignore patterns are bizarre, undocumented, and on Windows
+    # trying to ignore dotfiles causes all events to be ignored
+    if not args.skip_built_in_ignores and os.name != 'nt':
+        ignore_patterns += ['.*', '__pycache__/*', 'node_modules/*']
     
     if not args.blind:
         observer = watchdog.observers.Observer()
