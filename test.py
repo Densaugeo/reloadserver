@@ -170,6 +170,56 @@ def test_reload_by_watchdog():
     thread.join(2)
     with lock: assert wait_for_reload_responses[0] == 204
 
+# Had a bug where files that were deleted and re-created (instead of being
+# modified) did not trigger the watchdog
+@pytest.mark.fixture_args(debounce_interval=['10'])
+def test_reload_by_watchdog_file_created():
+    time.sleep(0.02) # Give the write time to make it's way through'
+    
+    thread = threading.Thread(target=wait_for_reload)
+    thread.start()
+    
+    time.sleep(0.1)
+    with lock: assert wait_for_reload_responses[0] is None
+    
+    os.mknod('new-file')
+    thread.join(2)
+    with lock: assert wait_for_reload_responses[0] == 204
+
+# Had a bug where files that were deleted and re-created (instead of being
+# modified) did not trigger the watchdog
+@pytest.mark.fixture_args(debounce_interval=['10'])
+def test_reload_by_watchdog_file_deleted():
+    with open('pre-existing-file', 'w') as f: f.write('foo')
+    time.sleep(0.02) # Give the write time to make it's way through'
+    
+    thread = threading.Thread(target=wait_for_reload)
+    thread.start()
+    
+    time.sleep(0.1)
+    with lock: assert wait_for_reload_responses[0] is None
+    
+    os.remove('pre-existing-file')
+    thread.join(2)
+    with lock: assert wait_for_reload_responses[0] == 204
+
+# Had a bug where files that were deleted and re-created (instead of being
+# modified) did not trigger the watchdog
+@pytest.mark.fixture_args(debounce_interval=['10'])
+def test_reload_by_watchdog_file_moved():
+    with open('old-location', 'w') as f: f.write('foo')
+    time.sleep(0.02) # Give the write time to make it's way through'
+    
+    thread = threading.Thread(target=wait_for_reload)
+    thread.start()
+    
+    time.sleep(0.1)
+    with lock: assert wait_for_reload_responses[0] is None
+    
+    os.rename('old-location', 'new-location')
+    thread.join(2)
+    with lock: assert wait_for_reload_responses[0] == 204
+
 @pytest.mark.fixture_args(debounce_interval=['10'])
 def test_reload_by_watchdog_multiple():
     threads = [

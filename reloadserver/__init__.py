@@ -40,14 +40,19 @@ def reload():
     with reload_signal:
         reload_signal.notify_all()
 
+def set_reload_timer():
+    global debounce_timer
+    if debounce_timer is not None:
+        debounce_timer.cancel()
+    
+    debounce_timer = threading.Timer(args.debounce_interval / 1000, reload)
+    debounce_timer.start()
+
 class WatchdogHandler(watchdog.events.PatternMatchingEventHandler):
-    def on_modified(self, event) -> None:
-        global debounce_timer
-        if debounce_timer is not None:
-            debounce_timer.cancel()
-        
-        debounce_timer = threading.Timer(args.debounce_interval / 1000, reload)
-        debounce_timer.start()
+    def on_modified(self, event) -> None: set_reload_timer()
+    def on_created (self, event) -> None: set_reload_timer()
+    def on_deleted (self, event) -> None: set_reload_timer()
+    def on_moved   (self, event) -> None: set_reload_timer()
 
 class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     # To be used only on .html files, to inject the script tag
@@ -169,7 +174,7 @@ def main() -> None:
         exit(1)
     
     ignore_patterns = [] if args.skip_built_in_ignores else [
-        '.*', '__pycache__/*', 'node_modules/*'
+        '.*', '__pycache__/*', 'node_modules/*',
     ] + args.ignore
     
     if not args.blind:
