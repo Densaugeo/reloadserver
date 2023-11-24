@@ -4,7 +4,7 @@ python:
   - "3.10"
   - "3.11"
   - "3.12"
-  - "3.13"
+# Travis CI doesn't support 3.13 yet
 install:
   - python -m pip install pytest requests watchdog
 script:
