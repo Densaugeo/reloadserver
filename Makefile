@@ -30,7 +30,8 @@ install-dev:
 	. venv-$(PY)/bin/activate; $(PY) -m pip install pytest requests watchdog
 
 server.pem:
-	openssl req -x509 -out server.pem -keyout server.pem -newkey rsa:2048 -nodes -sha256 -subj '/CN=server'
+	openssl req -x509 -out server.pem -keyout server.pem -newkey rsa:3072 \
+		-nodes -sha256 -subj '/CN=server' -days 10000
 
 package: reloadserver/__init__.py reloadserver/__main__.py LICENSE README.md setup.py
 	$(PY) -m pip install --user --upgrade setuptools wheel
