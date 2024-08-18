@@ -13,7 +13,8 @@ test-all: server.pem
 
 test: server.pem
 	rm -rf test-temp
-	. venv-$(PY)/bin/activate; PROTOCOL=$(PROTOCOL) VERBOSE=$(VERBOSE) $(PY) -u -m pytest $(PYTEST_ARGS) $(TEST)
+	PROTOCOL=$(PROTOCOL) VERBOSE=$(VERBOSE) venv-$(PY)/bin/python -u \
+		-m pytest $(PYTEST_ARGS) $(TEST)
 
 test-travis: server.pem
 	rm -rf test-temp
@@ -27,7 +28,8 @@ install-dev:
 	$(PY) -m pip install --user watchdog
 	
 	$(PY) -m venv venv-$(PY)
-	. venv-$(PY)/bin/activate; $(PY) -m pip install pytest requests watchdog
+	venv-$(PY)/bin/python -m pip install --upgrade pip
+	venv-$(PY)/bin/python -m pip install pytest requests watchdog
 
 server.pem:
 	openssl req -x509 -out server.pem -keyout server.pem -newkey rsa:3072 \
