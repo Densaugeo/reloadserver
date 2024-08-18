@@ -57,7 +57,7 @@ def try_a_fixture(request):
     server = subprocess.Popen(shell_args)
     
     # Wait for server to finish starting
-    for _ in range(10):
+    for _ in range(100):
         try:
             get('/', port=port or 8000)
             break
