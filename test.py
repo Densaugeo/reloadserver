@@ -1,5 +1,7 @@
-import pytest, os, requests, subprocess, time, urllib3, threading
+import os, subprocess, time, urllib3, threading
 from pathlib import Path
+
+import pytest, requests
 
 
 assert 'VERBOSE' in os.environ, '$VERBOSE envionment variable not set'
@@ -11,6 +13,9 @@ assert 'PROTOCOL' in os.environ, '$PROTOCOL envionment variable not set'
 PROTOCOL = os.environ['PROTOCOL']
 assert PROTOCOL in ['HTTP', 'HTTPS'], 'Unknown $PROTOCOL: {}'.format(PROTOCOL)
 
+
+pytestmark = pytest.mark.filterwarnings(
+    'ignore::urllib3.exceptions.InsecureRequestWarning')
 
 wait_for_reload_responses = [None, None]
 lock = threading.Lock()
@@ -30,8 +35,6 @@ def setup_function():
     with lock:
         wait_for_reload_responses[0] = None
         wait_for_reload_responses[1] = None
-    
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 @pytest.fixture(autouse=True)
 def try_a_fixture(request):
